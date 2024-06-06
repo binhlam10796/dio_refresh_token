@@ -1,7 +1,7 @@
 name: dio_refresh_token
 description: "Flutter package for managing and refreshing tokens using Dio. Includes token storage, automatic header injection, and customizable refresh strategies."
 version: 0.0.1
-homepage:
+homepage: https://github.com/binhlam10796/dio_refresh_token
 
 environment:
   sdk: '>=3.3.2 <4.0.0'
