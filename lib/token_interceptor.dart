@@ -59,6 +59,9 @@ class TokenInterceptor extends Interceptor {
   /// [TokenRefreshException].
   @override
   Future onError(DioException err, ErrorInterceptorHandler handler) async {
+    if (err.response == null) {
+      return handler.next(err);
+    }
     if (tokenRefreshStrategy.shouldRefreshToken(err.response!)) {
       try {
         final newAccessToken =
