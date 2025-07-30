@@ -16,11 +16,17 @@ class TokenInterceptor extends Interceptor {
   /// refreshing tokens.
   final TokenRefreshStrategy tokenRefreshStrategy;
 
+  /// The Dio instance used for retrying requests. If not provided, a new
+  /// instance will be created for each retry.
+  final Dio? dio;
+
   /// Creates a [TokenInterceptor] with the given [tokenManager] and
-  /// [tokenRefreshStrategy].
+  /// [tokenRefreshStrategy]. Optionally accepts a [dio] instance to use
+  /// for retrying requests.
   TokenInterceptor({
     required this.tokenManager,
     required this.tokenRefreshStrategy,
+    this.dio,
   });
 
   /// Intercepts outgoing requests to add the authorization headers.
@@ -59,19 +65,35 @@ class TokenInterceptor extends Interceptor {
   /// [TokenRefreshException].
   @override
   Future onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (tokenRefreshStrategy.shouldRefreshToken(err.response!)) {
+    // Check if response exists and if token should be refreshed
+    if (err.response != null && tokenRefreshStrategy.shouldRefreshToken(err.response!)) {
       try {
+        final dioInstance = dio ?? Dio();
         final newAccessToken =
-            await tokenRefreshStrategy.refreshToken(Dio(), tokenManager);
+            await tokenRefreshStrategy.refreshToken(dioInstance, tokenManager);
         if (newAccessToken != null) {
           final headers =
               tokenRefreshStrategy.getAuthorizationHeaders(newAccessToken);
           err.requestOptions.headers.addAll(headers);
-          final cloneReq = await Dio().request(
-            err.requestOptions.path,
+          
+          // Construct the full URL by combining baseUrl and path
+          final fullUrl = err.requestOptions.baseUrl.isNotEmpty 
+              ? err.requestOptions.baseUrl + err.requestOptions.path
+              : err.requestOptions.path;
+              
+          final cloneReq = await dioInstance.request(
+            fullUrl,
+            data: err.requestOptions.data,
+            queryParameters: err.requestOptions.queryParameters,
             options: Options(
               method: err.requestOptions.method,
               headers: err.requestOptions.headers,
+              responseType: err.requestOptions.responseType,
+              contentType: err.requestOptions.contentType,
+              validateStatus: err.requestOptions.validateStatus,
+              receiveTimeout: err.requestOptions.receiveTimeout,
+              sendTimeout: err.requestOptions.sendTimeout,
+              extra: err.requestOptions.extra,
             ),
           );
           return handler.resolve(cloneReq);
