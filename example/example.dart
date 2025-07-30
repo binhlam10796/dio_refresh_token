@@ -22,10 +22,11 @@ void main() async {
     refreshTokenExtractor: (response) => response.data['refresh_token'],
   );
 
-  // Add TokenInterceptor to Dio instance
+  // Add TokenInterceptor to Dio instance, passing the dio instance for consistent config
   dio.interceptors.add(TokenInterceptor(
     tokenManager: tokenManager,
     tokenRefreshStrategy: tokenRefreshStrategy,
+    dio: dio, // Pass the same dio instance to maintain configuration
   ));
 
   // Save initial tokens (for demonstration purposes)

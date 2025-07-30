@@ -9,6 +9,9 @@ A Flutter package for managing and refreshing tokens using Dio. Includes token s
 - Automatically add authorization headers to requests.
 - Customizable token refresh strategies.
 - Easy integration with Dio interceptors.
+- Proper URL construction for retry requests (handles baseUrl + path correctly).
+- Null-safe response handling to prevent unhandled exceptions.
+- Preserves original request data, query parameters, and options during retry.
 
 ## Installation
 
@@ -106,6 +109,7 @@ final tokenRefreshStrategy = TokenRefreshStrategyImpl(
 dio.interceptors.add(TokenInterceptor(
   tokenManager: tokenManager,
   tokenRefreshStrategy: tokenRefreshStrategy,
+  dio: dio, // Optional: pass the same dio instance to maintain configuration
 ));
 ```
 

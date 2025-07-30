@@ -245,5 +245,63 @@ void main() {
       verify(mockStrategy.refreshToken(mockDio, mockTokenManager)).called(1);
       verify(mockTokenManager.clearTokens()).called(1);
     });
+
+    test('onError handles null response without throwing exception', () async {
+      final err = DioException(
+        requestOptions: RequestOptions(path: ''),
+        response: null, // Null response case
+      );
+      final handler = ErrorInterceptorHandler();
+
+      await interceptor.onError(err, handler);
+
+      // Should not call shouldRefreshToken when response is null
+      verifyNever(mockStrategy.shouldRefreshToken(any));
+      verifyNever(mockStrategy.refreshToken(any, any));
+    });
+
+    test('onError constructs full URL correctly with baseUrl', () async {
+      when(mockStrategy.shouldRefreshToken(mockHttpResponse(401))).thenReturn(true);
+      when(mockStrategy.refreshToken(mockDio, mockTokenManager)).thenAnswer((_) async => 'new_access_token');
+      when(mockStrategy.getAuthorizationHeaders('new_access_token'))
+          .thenReturn({'Authorization': 'Bearer new_access_token'});
+
+      final err = DioException(
+        requestOptions: RequestOptions(
+          path: '/api/data',
+          baseUrl: 'https://api.example.com',
+        ),
+        response: mockHttpResponse(401),
+      );
+      final handler = ErrorInterceptorHandler();
+
+      await interceptor.onError(err, handler);
+
+      verify(mockStrategy.shouldRefreshToken(mockHttpResponse(401))).called(1);
+      verify(mockStrategy.refreshToken(mockDio, mockTokenManager)).called(1);
+      verify(mockStrategy.getAuthorizationHeaders('new_access_token')).called(1);
+    });
+
+    test('onError uses path only when baseUrl is empty', () async {
+      when(mockStrategy.shouldRefreshToken(mockHttpResponse(401))).thenReturn(true);
+      when(mockStrategy.refreshToken(mockDio, mockTokenManager)).thenAnswer((_) async => 'new_access_token');
+      when(mockStrategy.getAuthorizationHeaders('new_access_token'))
+          .thenReturn({'Authorization': 'Bearer new_access_token'});
+
+      final err = DioException(
+        requestOptions: RequestOptions(
+          path: 'https://api.example.com/api/data',
+          baseUrl: '', // Empty baseUrl
+        ),
+        response: mockHttpResponse(401),
+      );
+      final handler = ErrorInterceptorHandler();
+
+      await interceptor.onError(err, handler);
+
+      verify(mockStrategy.shouldRefreshToken(mockHttpResponse(401))).called(1);
+      verify(mockStrategy.refreshToken(mockDio, mockTokenManager)).called(1);
+      verify(mockStrategy.getAuthorizationHeaders('new_access_token')).called(1);
+    });
   });
 }
